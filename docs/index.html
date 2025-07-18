@@ -3,24 +3,234 @@
 
 <head>
   <meta charset="UTF-8" />
+  <link rel="icon" type="image/svg+xml" href="/vite.svg" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Three.js Demo</title>
+  <title>Three.js 3D Models Viewer</title>
   <style>
     body {
       margin: 0;
+      padding: 0;
       overflow: hidden;
+      font-family: 'Arial', sans-serif;
     }
 
-    canvas {
+    /* 控制面板样式 */
+    .control-panel {
+      position: fixed;
+      top: 20px;
+      left: 20px;
+      background: rgba(0, 0, 0, 0.8);
+      padding: 15px;
+      border-radius: 10px;
+      color: white;
+      z-index: 1000;
+      min-width: 250px;
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+
+    .control-panel h3 {
+      margin: 0 0 15px 0;
+      font-size: 16px;
+      color: #fff;
+      text-align: center;
+    }
+
+    .control-group {
+      margin-bottom: 15px;
+    }
+
+    .control-group h4 {
+      margin: 0 0 8px 0;
+      font-size: 14px;
+      color: #ccc;
+    }
+
+    .button-group {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 15px;
+    }
+
+    .btn {
+      padding: 8px 12px;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 12px;
+      font-weight: bold;
+      transition: all 0.3s;
+      flex: 1;
+    }
+
+    .btn-primary {
+      background: linear-gradient(45deg, #007bff, #0056b3);
+      color: white;
+    }
+
+    .btn-primary:hover {
+      background: linear-gradient(45deg, #0056b3, #004085);
+      transform: translateY(-1px);
+    }
+
+    .btn-secondary {
+      background: linear-gradient(45deg, #6c757d, #495057);
+      color: white;
+    }
+
+    .btn-secondary:hover {
+      background: linear-gradient(45deg, #495057, #343a40);
+      transform: translateY(-1px);
+    }
+
+    .model-controls {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .model-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 5px;
+      border-radius: 5px;
+      background: rgba(255, 255, 255, 0.1);
+      margin-bottom: 5px;
+    }
+
+    .model-checkbox {
+      margin: 0;
+    }
+
+    .model-label {
+      font-size: 12px;
+      color: #fff;
+      flex: 1;
+      cursor: pointer;
+    }
+
+    .model-size {
+      font-size: 10px;
+      color: #888;
+    }
+
+    /* 加载状态样式 */
+    .loading-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
       width: 100%;
       height: 100%;
-      display: block;
+      background: rgba(0, 0, 0, 0.8);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      z-index: 2000;
+      color: white;
+      font-family: Arial, sans-serif;
+    }
+
+    .loading-spinner {
+      border: 4px solid #f3f3f3;
+      border-top: 4px solid #3498db;
+      border-radius: 50%;
+      width: 50px;
+      height: 50px;
+      animation: spin 1s linear infinite;
+      margin-bottom: 20px;
+    }
+
+    @keyframes spin {
+      0% {
+        transform: rotate(0deg);
+      }
+
+      100% {
+        transform: rotate(360deg);
+      }
+    }
+
+    .loading-text {
+      font-size: 18px;
+      margin-bottom: 10px;
+    }
+
+    .loading-progress {
+      font-size: 14px;
+      color: #ccc;
+    }
+
+    /* 隐藏加载屏幕 */
+    .loading-overlay.hidden {
+      display: none;
+    }
+
+    /* 信息面板 */
+    .info-panel {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      background: rgba(0, 0, 0, 0.8);
+      padding: 10px 15px;
+      border-radius: 8px;
+      color: white;
+      font-size: 12px;
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      max-width: 300px;
+    }
+
+    /* 建筑提示样式 */
+    .building-tip {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: rgba(0, 0, 0, 0.9);
+      color: white;
+      padding: 15px 25px;
+      border-radius: 10px;
+      font-size: 16px;
+      font-weight: bold;
+      backdrop-filter: blur(15px);
+      border: 2px solid rgba(255, 255, 255, 0.3);
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+      z-index: 1500;
+      opacity: 0;
+      transition: opacity 0.3s ease;
+      pointer-events: none;
+    }
+
+    .building-tip.show {
+      opacity: 1;
     }
   </style>
-  <script type="module" crossorigin src="./assets/index-BCg1h0PE.js"></script>
+  <script type="module" crossorigin src="./assets/index-CJdI0K0g.js"></script>
 </head>
 
 <body>
+  <!-- 加载屏幕 -->
+  <div class="loading-overlay" id="loadingOverlay">
+    <div class="loading-spinner"></div>
+    <div class="loading-text">正在加载3D模型...</div>
+    <div class="loading-progress" id="loadingProgress">准备中...</div>
+  </div>
+
+
+  <!-- 信息面板 -->
+  <div class="info-panel">
+    <div><strong>操作提示:</strong></div>
+    <div>• 鼠标拖拽: 旋转视角</div>
+    <div>• 滚轮: 缩放</div>
+    <div>• 右键拖拽: 平移</div>
+  </div>
+
+  <!-- 建筑提示 -->
+  <div class="building-tip" id="buildingTip">双击进入室内</div>
+
 </body>
 
 </html>
