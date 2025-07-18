@@ -410,10 +410,15 @@ function onDoubleClick(event) {
           buildingTip.classList.remove("show");
         }
 
-        // 切换到下一个场景
-        currentScene = (currentScene + 1) % scenes.length;
-        switchToScene(currentScene);
-        console.log(`🏗️ 切换到场景 ${currentScene + 1}`);
+        // 向父级窗口发送场景切换消息
+        if (window.parent && window.parent !== window) {
+          window.parent.postMessage(
+            {
+              cmd: "switchScene",
+            },
+            "*"
+          );
+        }
       }
     }
   }
